@@ -25,60 +25,76 @@
 
 const { exec } = require("child_process");
 const os = require('os');
-// import getMAC, { isMAC } from 'getmac';
-const getmac = require('getmac');
+const getmac = require('getmac').default;
 const axios = require('axios');
 const config = require('./config');
 const querystring = require('querystring');
 const fs = require('fs');
 const cron = require('node-cron');
+const { log } = require("console");
+const { exitCode } = require("process");
 
 cron.schedule('*/1 * * * *', async () => {
   await m();
 });
 
 async function m() {
-  // getmac.getMac((err, macAddress) => {
-  //   if (err) {
-  //     console.error(err);
-  //   } else {
-  //     console.log('Adresse MAC de votre système :', macAddress);
-  //   }
-  // });
   const checkDiskSpace = require('check-disk-space').default;
-  const dd = await checkDiskSpace(__dirname);
-  console.log("-----------------", dd);
-  console.log("====", os.uptime());
-  console.log("++++", process.uptime());
-
+  const ddObject = await checkDiskSpace(__dirname);
+  const DD = ddObject.size;
+  const mac = getmac();
   fs.readFile("/proc/meminfo", 'utf8', (err, data) => {
     if (err) {
       console.error('Erreur de lecture du fichier :', err);
       return;
     }
-    console.log(data);
-    let intervalID; // Variable pour stocker l'ID de l'intervalle
+    let stdoutData = '';
+    const childProcess = exec("uptime -s", async (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Erreur lors de l'exécution de la commande : ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.error(`Erreur de sortie standard : ${stderr}`);
+        return;
+      }
+      const MemTotal = ((/(?<name>MemTotal): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const MemFree = ((/(?<name>MemFree): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const Cached = ((/(?<name>Cached): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const Buffers = ((/(?<name>Buffers): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const SwapTotal = ((/(?<name>SwapTotal): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const used = (MemTotal - MemFree - (Cached + Buffers));
+      const reboot = new Date(stdout.trim()).getTime();
+      const objBosFile = {
+        infoServer: {
+          mac: mac,
+          reboot: parseFloat(reboot),
+          ram: parseFloat(used),
+          cache: parseFloat(Cached),
+          swap: parseFloat(SwapTotal),
+          DD: parseFloat(((ddObject.size / 1048576) - (ddObject.free / 1048576))),
+          flux: 2,
+        }
+      };
+      console.log(objBosFile);
+      const rep = await post("http://localhost:5050/servers/pushDataServer", objBosFile);
+
+    });
+
+
     let valeurRetour = null; // Variable pour stocker la valeur retournée
     function afficherDateActuelle() {
       intervalID = setInterval(() => {
         const dateActuelle = new Date();
-        console.log('Date actuelle :', dateActuelle);
         valeurRetour = dateActuelle;
       }, 10000); // Répétition toutes les 10 secondes (10000 millisecondes)
     }
-
     afficherDateActuelle();
-    setTimeout(() => {
-      console.log('Valeur retournée :', valeurRetour);
-    }, 30000); // Par exemple, après 30 secondes
-
+    // setTimeout(() => {
+    //   console.log('Valeur retournée :', valeurRetour);
+    // }, 30000); // Par exemple, après 30 secondes
   });
-  const objBosFile = {
-    infoServer: { test: "hello" }
-  };
-  const rep = await post("http://localhost:5050/servers/pushDataServer", objBosFile);
 }
-
 m();
 
 async function post(url, data) {

@@ -25,6 +25,7 @@
     "cron": "^2.4.3",
     "getmac": "^5.20.0",
     "node-cron": "^3.0.2",
+    "node-fetch": "^3.3.2",
     "querystring": "^0.2.1"
   }
 }

@@ -2,7 +2,7 @@
 *.swp
 *.swo
 # Répertoire de modules Node.js
-node_modules
+/node_modules
 
 # Fichiers de logs
 logs/
