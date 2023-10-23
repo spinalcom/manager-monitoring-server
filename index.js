@@ -33,11 +33,6 @@ const cron = require('node-cron');
 const dotenv = require('dotenv');
 dotenv.config();
 const { getEnvValue, setEnvValue } = require('./writeToenFile');
-const generator = require('generate-password');
-const keyCom = generator.generate({
-  length: 30,
-  numbers: true,
-});
 cron.schedule('*/1 * * * *', async () => {
   await m();
 });
@@ -82,6 +77,7 @@ async function m() {
       const objBosFile = {
         registerKey: config.monitoringApiConfig.registerKey,
         infoServer: {
+          serverManagerId: config.monitoringApiConfig.serverManagerId,
           mac: mac,
           reboot: parseFloat(reboot),
           ram: parseFloat(used),

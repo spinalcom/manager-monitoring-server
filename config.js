@@ -25,6 +25,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 const config = {
   monitoringApiConfig: {
+    serverManagerId: process.env.SERVER_MANAGER_ID,
     registerKey: process.env.REGISTER_KEY,
     monitoring_url: process.env.MONITORING_URL,
     email: process.env.EMAIL,
