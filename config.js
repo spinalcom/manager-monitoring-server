@@ -21,26 +21,15 @@
  * with this file. If not, see
  * <http://resources.spinalcom.com/licenses.pdf>.
  */
-
+const dotenv = require('dotenv');
+dotenv.config();
 const config = {
-  spinalConnector: {
-    protocol: process.env.SPINALHUB_PROTOCOL, // user id
-    user: process.env.SPINAL_USER_ID, // user id
-    password: process.env.SPINAL_PASSWORD, // user password
-    host: process.env.SPINALHUB_IP, // can be an ip address
-    port: process.env.SPINALHUB_PORT, // port
-  },
-  file: {
-    // path to a digital twin in spinalhub filesystem
-    path: process.env.SPINAL_DTWIN_PATH,
-  },
   monitoringApiConfig: {
-    registerKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybU5hbWUiOiJib3MxIiwiaWF0IjoxNjkzOTI1MzMyLCJleHAiOjE2OTQwMTE3MzJ9.RQiFwFO-fwAIQtDb43Nbq3BRq6R3ajUfKfQXJTyxvLA",
-    monitoring_url: "http://localhost:5050",
-    organName: "app",
-    email: "adminMonitoring@spinalcom.com",
-    password: "ABu0Rk3tZn",
-    grant_type: "password"
+    registerKey: process.env.REGISTER_KEY,
+    monitoring_url: process.env.MONITORING_URL,
+    email: process.env.EMAIL,
+    password: process.env.PASSWORD,
+    grant_type: process.env.GRANT_TYPE,
   }
 };
 module.exports = config;

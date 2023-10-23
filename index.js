@@ -24,32 +24,41 @@
 
 
 const { exec } = require("child_process");
-const os = require('os');
 const getmac = require('getmac').default;
 const axios = require('axios');
 const config = require('./config');
 const querystring = require('querystring');
 const fs = require('fs');
 const cron = require('node-cron');
-const { log } = require("console");
-const { exitCode } = require("process");
-
+const dotenv = require('dotenv');
+dotenv.config();
+const { getEnvValue, setEnvValue } = require('./writeToenFile');
+const generator = require('generate-password');
+const keyCom = generator.generate({
+  length: 30,
+  numbers: true,
+});
 cron.schedule('*/1 * * * *', async () => {
   await m();
 });
-
+async function DD(bytes) {
+  const decimals = 2;
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  var result = parseFloat((bytes / Math.pow(k, i)).toFixed(dm));
+  return result;
+}
 async function m() {
   const checkDiskSpace = require('check-disk-space').default;
   const ddObject = await checkDiskSpace(__dirname);
-  const DD = ddObject.size;
   const mac = getmac();
   fs.readFile("/proc/meminfo", 'utf8', (err, data) => {
     if (err) {
       console.error('Erreur de lecture du fichier :', err);
       return;
     }
-    let stdoutData = '';
-    const childProcess = exec("uptime -s", async (error, stdout, stderr) => {
+    exec("uptime -s", async (error, stdout, stderr) => {
       if (error) {
         console.error(`Erreur lors de l'exécution de la commande : ${error.message}`);
         return;
@@ -63,45 +72,39 @@ async function m() {
       const Cached = ((/(?<name>Cached): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
       const Buffers = ((/(?<name>Buffers): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
       const SwapTotal = ((/(?<name>SwapTotal): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
+      const SwapFree = ((/(?<name>SwapFree): *(?<value>\d+).(?<unit>\w+)/g.exec(data))[2]) / 1048576;
       const used = (MemTotal - MemFree - (Cached + Buffers));
+      const swap = SwapTotal - SwapFree;
+      const DD_size = await DD(ddObject.size);
+      const DD_free = await DD(ddObject.free);
+      const dd = DD_size - DD_free;
       const reboot = new Date(stdout.trim()).getTime();
       const objBosFile = {
+        registerKey: config.monitoringApiConfig.registerKey,
         infoServer: {
           mac: mac,
           reboot: parseFloat(reboot),
           ram: parseFloat(used),
           cache: parseFloat(Cached),
-          swap: parseFloat(SwapTotal),
-          DD: parseFloat(((ddObject.size / 1048576) - (ddObject.free / 1048576))),
+          swap: parseFloat(swap),
+          DD: parseFloat(dd),
           flux: 2,
         }
       };
-      console.log(objBosFile);
-      const rep = await post("http://localhost:5050/servers/pushDataServer", objBosFile);
-
+      const rep = await post(`${config.monitoringApiConfig.monitoring_url}` + "/servers/pushDataServer", objBosFile);
     });
-
-
-    let valeurRetour = null; // Variable pour stocker la valeur retournée
     function afficherDateActuelle() {
       intervalID = setInterval(() => {
         const dateActuelle = new Date();
-        valeurRetour = dateActuelle;
       }, 10000); // Répétition toutes les 10 secondes (10000 millisecondes)
     }
     afficherDateActuelle();
-    // setTimeout(() => {
-    //   console.log('Valeur retournée :', valeurRetour);
-    // }, 30000); // Par exemple, après 30 secondes
   });
 }
-m();
-
 async function post(url, data) {
   const config = await getConfig();
   return axios.post(url, data, config);
 }
-
 async function getConfig() {
   const token = await getToken();
   return {
@@ -112,7 +115,6 @@ async function getConfig() {
     }
   };
 }
-
 
 async function getToken() {
   try {
@@ -128,6 +130,11 @@ async function getToken() {
     throw (error);
   }
 }
+// function keyComConfig() {
+//   if (getEnvValue("KEY_COM") === '""') {
+//     setEnvValue('KEY_COM', keyCom);
+//   }
+// }
 
 
 
